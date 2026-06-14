@@ -352,6 +352,7 @@
   <a href="#method">方法论</a>
   <a href="#repro">复现实验</a>
   <a href="#novel">原创贡献</a>
+  <a href="#deep">深度解析</a>
   <a href="#summary">结论</a>
 </nav>
 
@@ -915,6 +916,238 @@
           <div class="finding-label">// KEY FINDING · NOVEL</div>
           25×25 CKA 矩阵呈现三个清晰区域：①CNN 子块（层 1–13）保留了纯 ResNet 的楼梯结构；②Transformer 子块（层 14–25）呈现均一网格；③<strong>跨边界区域 CKA 趋近于零</strong>，形成尖锐不连续。
           尽管两部分均在 ImageNet-1K 上预训练，处理相同图像，它们运行在几何上根本不兼容的表示空间中。线性投影仅改变维度，无法对齐几何结构。这表明有效的混合模型需要联合训练来学习跨架构边界的共同表示语言。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ═══ DEEP ANALYSIS ═══ -->
+<section id="deep">
+  <div class="container">
+    <p class="section-tag">DEEP ANALYSIS · POST-HOC</p>
+    <h2 class="section-title">Spatial CKA 断层的注意力机制解析</h2>
+    <p class="section-desc">通过直接提取 12 层注意力权重矩阵，验证两个断层的成因假说</p>
+
+    <!-- 指标解释 -->
+    <div class="two-col reveal">
+
+      <!-- 注意力距离 -->
+      <div class="card" style="border-top:3px solid var(--accent3)">
+        <h3>指标一：平均注意力距离（感受野）</h3>
+        <p style="margin-bottom:1rem">对每个 patch query token，计算它关注的所有 key token 的加权平均空间距离，衡量"注意力能看多远"。</p>
+
+        <!-- SVG: attention distance diagram -->
+        <svg viewBox="0 0 340 200" width="100%" style="display:block;background:#0a0a0f;border-radius:4px;padding:4px">
+          <!-- 14x14 grid excerpt (show 5x5) -->
+          <text x="170" y="16" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">14×14 patch 网格（局部示意）</text>
+          <g transform="translate(60,28)">
+            <!-- grid cells -->
+            <rect x="0"  y="0"  width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="22" y="0"  width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="44" y="0"  width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="66" y="0"  width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="88" y="0"  width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+
+            <rect x="0"  y="22" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="22" y="22" width="22" height="22" fill="rgba(91,140,255,.25)" stroke="#5b8cff" stroke-width="1.5"/>
+            <rect x="44" y="22" width="22" height="22" fill="rgba(57,217,138,.15)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="66" y="22" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="88" y="22" width="22" height="22" fill="rgba(57,217,138,.06)" stroke="#2a2a3a" stroke-width="0.5"/>
+
+            <rect x="0"  y="44" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="22" y="44" width="22" height="22" fill="rgba(57,217,138,.10)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="44" y="44" width="22" height="22" fill="rgba(57,217,138,.25)" stroke="#39d98a" stroke-width="1"/>
+            <rect x="66" y="44" width="22" height="22" fill="rgba(57,217,138,.10)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="88" y="44" width="22" height="22" fill="rgba(57,217,138,.04)" stroke="#2a2a3a" stroke-width="0.5"/>
+
+            <rect x="0"  y="66" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="22" y="66" width="22" height="22" fill="rgba(57,217,138,.04)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="44" y="66" width="22" height="22" fill="rgba(57,217,138,.08)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="66" y="66" width="22" height="22" fill="rgba(201,123,255,.15)" stroke="#c97bff" stroke-width="1"/>
+            <rect x="88" y="66" width="22" height="22" fill="rgba(201,123,255,.06)" stroke="#2a2a3a" stroke-width="0.5"/>
+
+            <rect x="0"  y="88" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="22" y="88" width="22" height="22" fill="#1a1a26" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="44" y="88" width="22" height="22" fill="rgba(57,217,138,.03)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="66" y="88" width="22" height="22" fill="rgba(201,123,255,.08)" stroke="#2a2a3a" stroke-width="0.5"/>
+            <rect x="88" y="88" width="22" height="22" fill="rgba(201,123,255,.03)" stroke="#2a2a3a" stroke-width="0.5"/>
+
+            <!-- query label -->
+            <text x="33" y="37" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="9" font-weight="700">Q</text>
+
+            <!-- distance arrows -->
+            <line x1="33" y1="33" x2="55" y2="55" stroke="#39d98a" stroke-width="1.2" stroke-dasharray="3,2"/>
+            <text x="52" y="48" fill="#39d98a" font-family="'Space Mono',monospace" font-size="8">d=√2</text>
+
+            <line x1="33" y1="33" x2="77" y2="77" stroke="#c97bff" stroke-width="1.2" stroke-dasharray="3,2"/>
+            <text x="78" y="68" fill="#c97bff" font-family="'Space Mono',monospace" font-size="8">d=√8</text>
+          </g>
+
+          <!-- Formula -->
+          <text x="170" y="150" text-anchor="middle" fill="#8888aa" font-family="'Inter',sans-serif" font-size="9">加权平均距离 =</text>
+          <text x="170" y="163" text-anchor="middle" fill="#39d98a" font-family="'Space Mono',monospace" font-size="9">Σⱼ attn[q→j] × dist(q, j)</text>
+          <text x="170" y="178" text-anchor="middle" fill="#8888aa" font-family="'Inter',sans-serif" font-size="9">值大 = 全局关注 · 值小 = 局部关注</text>
+
+          <!-- Legend -->
+          <rect x="20" y="148" width="10" height="10" fill="rgba(91,140,255,.4)" stroke="#5b8cff" stroke-width="1"/>
+          <text x="34" y="158" fill="#5b8cff" font-family="'Inter',sans-serif" font-size="9">Query</text>
+          <rect x="20" y="164" width="10" height="10" fill="rgba(57,217,138,.25)" stroke="#39d98a" stroke-width="1"/>
+          <text x="34" y="174" fill="#39d98a" font-family="'Inter',sans-serif" font-size="9">高权重 key</text>
+          <rect x="20" y="180" width="10" height="10" fill="rgba(201,123,255,.15)" stroke="#c97bff" stroke-width="1"/>
+          <text x="34" y="190" fill="#c97bff" font-family="'Inter',sans-serif" font-size="9">低权重 key</text>
+        </svg>
+      </div>
+
+      <!-- CLS 注意力权重 -->
+      <div class="card" style="border-top:3px solid var(--accent4)">
+        <h3>指标二：patch→CLS 注意力权重</h3>
+        <p style="margin-bottom:1rem">对每个 patch token（作为 query），它分配给 CLS token（位置 0）的注意力权重大小，衡量"patch 向 CLS 汇报信息"的程度。</p>
+
+        <svg viewBox="0 0 340 200" width="100%" style="display:block;background:#0a0a0f;border-radius:4px;padding:4px">
+          <!-- CLS token -->
+          <rect x="20" y="70" width="44" height="44" rx="4" fill="rgba(245,200,66,.15)" stroke="#f5c842" stroke-width="2"/>
+          <text x="42" y="89" text-anchor="middle" fill="#f5c842" font-family="'Space Mono',monospace" font-size="10" font-weight="700">CLS</text>
+          <text x="42" y="103" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">pos=0</text>
+
+          <!-- patch tokens -->
+          <rect x="130" y="28"  width="36" height="36" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1"/>
+          <text x="148" y="51"  text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">p₁</text>
+
+          <rect x="180" y="28"  width="36" height="36" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1"/>
+          <text x="198" y="51"  text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">p₂</text>
+
+          <rect x="130" y="80"  width="36" height="36" rx="3" fill="rgba(201,123,255,.1)" stroke="#c97bff" stroke-width="1.5"/>
+          <text x="148" y="103" text-anchor="middle" fill="#c97bff" font-family="'Space Mono',monospace" font-size="9">pᵢ</text>
+          <text x="148" y="115" text-anchor="middle" fill="#c97bff" font-family="'Space Mono',monospace" font-size="7">query</text>
+
+          <rect x="180" y="80"  width="36" height="36" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1"/>
+          <text x="198" y="103" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">p₄</text>
+
+          <rect x="130" y="132" width="36" height="36" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1"/>
+          <text x="148" y="155" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">p₅</text>
+
+          <rect x="180" y="132" width="36" height="36" rx="3" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1"/>
+          <text x="198" y="155" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">p₆</text>
+
+          <!-- attention arrows: pᵢ → CLS (thick, highlighted) -->
+          <line x1="130" y1="98" x2="64" y2="92" stroke="#f5c842" stroke-width="2.5" marker-end="url(#arrG)"/>
+          <text x="96" y="88" fill="#f5c842" font-family="'Space Mono',monospace" font-size="9" font-weight="700">0.021</text>
+          <text x="96" y="100" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">= 4.2×基线</text>
+
+          <!-- attention arrows: pᵢ → other patches (thin) -->
+          <line x1="148" y1="80" x2="148" y2="64"  stroke="#2a2a3a" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="160" y1="98" x2="180" y2="98"  stroke="#2a2a3a" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="148" y1="132" x2="148" y2="116" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="3,2"/>
+
+          <!-- baseline label -->
+          <text x="270" y="90" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">均匀基线</text>
+          <text x="270" y="102" fill="#f5c842" font-family="'Space Mono',monospace" font-size="8">1/197=0.005</text>
+
+          <!-- bottom labels -->
+          <text x="170" y="185" text-anchor="middle" fill="#8888aa" font-family="'Inter',sans-serif" font-size="9">权重越大 → patch 越依赖 CLS 聚合信息</text>
+          <text x="170" y="197" text-anchor="middle" fill="#c97bff" font-family="'Space Mono',monospace" font-size="9">Block 1 实测：29.6× 均匀基线</text>
+
+          <defs>
+            <marker id="arrG" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 6 3 L 0 6 z" fill="#f5c842"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <hr class="thin" />
+
+    <!-- 实验数据表格 -->
+    <div class="reveal">
+      <h3 style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:1.2rem">直接测量结果（B=32，torchvision ViT-B/16）</h3>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Block</th>
+            <th>相邻层 CKA</th>
+            <th>注意力距离（格）</th>
+            <th>patch→CLS 权重</th>
+            <th>× 均匀基线</th>
+            <th>阶段</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">B0</td><td>—</td><td class="num">6.76</td><td class="num">0.0223</td><td class="num">4.4×</td><td style="color:var(--accent1)">早期聚合</td></tr>
+          <tr><td class="num">B1</td><td class="num">0.834</td><td class="num">5.32</td><td class="num" style="color:var(--accent2)">0.1503</td><td class="num" style="color:var(--accent2)">29.6×</td><td style="color:var(--accent1)">早期聚合</td></tr>
+          <tr><td class="num">B2</td><td class="num">0.794</td><td class="num">4.49</td><td class="num">0.1172</td><td class="num">23.1×</td><td style="color:var(--accent1)">早期聚合</td></tr>
+          <tr><td class="num">B3</td><td class="num">0.886</td><td class="num">4.57</td><td class="num">0.0803</td><td class="num">15.8×</td><td style="color:var(--accent1)">早期聚合</td></tr>
+          <tr><td class="num">B4</td><td class="num">0.828</td><td class="num">4.40</td><td class="num">0.0223</td><td class="num">4.4×</td><td style="color:var(--accent1)">早期聚合</td></tr>
+          <tr style="background:rgba(255,107,53,.06)">
+            <td class="num" style="color:var(--accent2)">B4→B5</td>
+            <td class="num" style="color:var(--accent2);font-weight:700">0.591 ⚡</td>
+            <td class="num" style="color:var(--accent2)">+1.01 跳变</td>
+            <td colspan="2" style="color:var(--accent2);text-align:center">CLS聚合结束 → 全局混合开始</td>
+            <td style="color:var(--accent2)">── 第一断层 ──</td>
+          </tr>
+          <tr><td class="num">B5</td><td class="num">0.996</td><td class="num">5.41</td><td class="num">0.0528</td><td class="num">10.4×</td><td style="color:var(--accent3)">稳定混合</td></tr>
+          <tr><td class="num">B6</td><td class="num">0.994</td><td class="num">5.66</td><td class="num">0.0397</td><td class="num">7.8×</td><td style="color:var(--accent3)">稳定混合</td></tr>
+          <tr><td class="num">B7</td><td class="num">0.995</td><td class="num">6.40</td><td class="num">0.0301</td><td class="num">5.9×</td><td style="color:var(--accent3)">稳定混合</td></tr>
+          <tr><td class="num">B8</td><td class="num">0.995</td><td class="num">6.85</td><td class="num">0.0173</td><td class="num">3.4×</td><td style="color:var(--accent3)">稳定混合</td></tr>
+          <tr><td class="num">B9</td><td class="num">0.991</td><td class="num">6.84</td><td class="num">0.0214</td><td class="num">4.2×</td><td style="color:var(--accent3)">稳定混合</td></tr>
+          <tr style="background:rgba(255,107,53,.06)">
+            <td class="num" style="color:var(--accent2)">B9→B10</td>
+            <td class="num" style="color:var(--accent2);font-weight:700">0.687 ⚡</td>
+            <td class="num">无跳变(6.77)</td>
+            <td colspan="2" style="color:var(--accent4);text-align:center">FFN 表示旋转（非注意力驱动）</td>
+            <td style="color:var(--accent2)">── 第二断层 ──</td>
+          </tr>
+          <tr><td class="num">B10</td><td class="num">0.983</td><td class="num">6.77</td><td class="num">0.0275</td><td class="num">5.4×</td><td style="color:var(--accent4)">分类准备</td></tr>
+          <tr><td class="num">B11</td><td>—</td><td class="num">6.94</td><td class="num">0.0412</td><td class="num">8.1×</td><td style="color:var(--accent4)">分类准备</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 验证结果图 -->
+    <div class="reveal mt2">
+      <figure class="result-figure">
+        <img src="attn_mechanism_verification.png" alt="Attention mechanism verification" loading="lazy"/>
+        <figcaption>
+          <strong>四图验证面板：</strong>①相邻层 Spatial-CKA（断层参考）·
+          ②平均注意力距离（假说A：B4→5跳变+1.0格）·
+          ③patch→CLS 注意力权重（发现 B1–3 异常高达29.6×，假说B需修正）·
+          ④CLS token 注意力熵（全程相对稳定，排除 CLS 聚焦突变）。
+          橙色区域标注两个 Spatial-CKA 断层位置。
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- 修正后的结论 -->
+    <div class="two-col reveal mt2">
+      <div class="exp-block" style="margin-bottom:0">
+        <div class="exp-header">
+          <div class="exp-number" style="color:var(--accent2)">⚡</div>
+          <div class="exp-title-wrap">
+            <div class="exp-title">第一断层 B4→5：CKA = 0.591</div>
+            <div class="exp-subtitle">成因：早期 CLS 聚合阶段结束 + 感受野跳变</div>
+          </div>
+          <span class="exp-badge" style="background:rgba(57,217,138,.15);color:var(--accent3);border:1px solid rgba(57,217,138,.3)">假说A ✓ 支持</span>
+        </div>
+        <div class="exp-body">
+          <p>B1–3 的 patch→CLS 注意力异常高（29.6×），同时注意力收缩到最局部（距离4.40），反映 patch token 在"向 CLS 集中汇报"的同时彼此局部交互。B4 标志此聚合阶段结束，B5 注意力距离跳变 <strong>+1.01 格</strong>，进入全局混合模式。两种模式的空间响应几何不兼容，产生断层。</p>
+        </div>
+      </div>
+
+      <div class="exp-block" style="margin-bottom:0">
+        <div class="exp-header">
+          <div class="exp-number" style="color:var(--accent4)">⚡</div>
+          <div class="exp-title-wrap">
+            <div class="exp-title">第二断层 B9→10：CKA = 0.687</div>
+            <div class="exp-subtitle">成因：FFN 驱动的表示旋转（非注意力突变）</div>
+          </div>
+          <span class="exp-badge" style="background:rgba(201,123,255,.15);color:var(--accent4);border:1px solid rgba(201,123,255,.3)">假说B 修正</span>
+        </div>
+        <div class="exp-body">
+          <p>B9→10 注意力距离无跳变（6.84→6.77），patch→CLS 权重仅小幅上升（4.2×→5.4×），排除了注意力模式突变的解释。第二断层由 <strong>Block 10 的 FFN（MLP）权重主导</strong>：B5–9 相邻 CKA≈0.99（几乎原地踏步），B10 的 MLP 做了一次较大的特征空间旋转，将表示从"稳定全局混合"切换到"分类准备"模式，此后 patch→CLS 持续回升（B11: 8.1×），CLS 开始最终汇聚。</p>
         </div>
       </div>
     </div>
