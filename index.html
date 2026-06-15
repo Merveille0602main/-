@@ -697,8 +697,9 @@
     </div>
 
     <!-- Exp 3 -->
-    <div class="exp-block reveal">
-      <div class="exp-header">
+
+
+   <div class="exp-header">
         <div class="exp-number">03</div>
         <div class="exp-title-wrap">
           <div class="exp-title">CLS Token vs GAP 分类头微调对比</div>
@@ -1265,28 +1266,56 @@
       <figure class="result-figure">
         <img src="attn_mechanism_verification.png" alt="Attention mechanism verification" loading="lazy"/>
         <figcaption>
-          <strong>四图验证面板：</strong>①相邻层 Spatial-CKA（断层参考）·
-          ②平均注意力距离（假说A：B4→5跳变+1.0格）·
-          ③patch→CLS 注意力权重（发现 B1–3 异常高达29.6×，假说B需修正）·
-          ④CLS token 注意力熵（全程相对稳定，排除 CLS 聚焦突变）。
-          橙色区域标注两个 Spatial-CKA 断层位置。
+          <strong>四图验证面板（32张图×12头平均）：</strong>①相邻层 Spatial-CKA（断层参考）·
+          ②平均注意力距离（B2–4 收缩至最局部，B5 跳变+1.0格）·
+          ③patch→CLS 注意力权重（B1–3 高达29.6×，早期强烈汇报阶段）·
+          ④CLS token 注意力熵。橙色区域标注两个断层位置。
         </figcaption>
       </figure>
     </div>
 
-    <!-- 修正后的结论 -->
+    <hr class="thin" />
+
+    <!-- 注意力热力图 -->
+    <div class="reveal mt2">
+      <h3 style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.4rem">单图注意力热力图（单张图像 · 12头平均 · per-block归一化）</h3>
+      <p style="color:var(--muted);font-size:.9rem;margin-bottom:1.2rem">固定测试集第0张图，对每个 Block 的注意力矩阵按行提取 Query 对应的 196 个 patch key 的权重，12 个头取平均后 reshape 为 14×14 热力图。每张图独立归一化（亮=高权重，暗=低权重）。橙色标题 = Spatial-CKA 断层位置。</p>
+
+      <figure class="result-figure" style="margin-bottom:1.4rem">
+        <img src="attn_vis_patch_query.png" alt="Panel A: Center Patch (7,7) as Query" loading="lazy"/>
+        <figcaption>
+          <strong>Panel A — 中心 patch (7,7) 作为 Query</strong>，观察每个 Block 中该 patch 关注哪里。
+          B2 注意力高度集中于自身邻域（最局部）；<strong>B4（橙色）</strong>注意力骤然扩散至全图，
+          是从"局部邻域感知"向"全局信息整合"的转折点；B5–B10 维持全局扩散状态。
+        </figcaption>
+      </figure>
+
+      <figure class="result-figure">
+        <img src="attn_vis_cls_query.png" alt="Panel B: CLS Token as Query" loading="lazy"/>
+        <figcaption>
+          <strong>Panel B — CLS token 作为 Query</strong>，观察 CLS 每个 Block 中"主动关注"哪些 patch。
+          B0–B3 CLS 均匀扫视全图；<strong>B4（橙色）</strong>CLS 突然收缩为精准聚焦（仅关注少数显著 patch），
+          与 Panel A 中 patch 向全局扩散形成互补的"角色互换"；<strong>B9</strong> 出现第二次 CLS 聚焦收缩。
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- 结论 -->
     <div class="two-col reveal mt2">
       <div class="exp-block" style="margin-bottom:0">
         <div class="exp-header">
           <div class="exp-number" style="color:var(--accent2)">⚡</div>
           <div class="exp-title-wrap">
             <div class="exp-title">第一断层 B4→5：CKA = 0.591</div>
-            <div class="exp-subtitle">成因：早期 CLS 聚合阶段结束 + 感受野跳变</div>
+            <div class="exp-subtitle">Patch 全局扩散 ↔ CLS 精准聚焦的角色互换</div>
           </div>
-          <span class="exp-badge" style="background:rgba(57,217,138,.15);color:var(--accent3);border:1px solid rgba(57,217,138,.3)">假说A ✓ 支持</span>
+          <span class="exp-badge" style="background:rgba(57,217,138,.15);color:var(--accent3);border:1px solid rgba(57,217,138,.3)">热力图直接可见</span>
         </div>
         <div class="exp-body">
-          <p>B1–3 的 patch→CLS 注意力异常高（29.6×），同时注意力收缩到最局部（距离4.40），反映 patch token 在"向 CLS 集中汇报"的同时彼此局部交互。B4 标志此聚合阶段结束，B5 注意力距离跳变 <strong>+1.01 格</strong>，进入全局混合模式。两种模式的空间响应几何不兼容，产生断层。</p>
+          <p>B0–B3：patch 注意力局部（B2 最集中），CLS 均匀扫全图（B1–3 的 patch→CLS 权重高达 29.6×）。
+          <strong>B4 是转折点</strong>：patch token 由局部感知骤然切换到全局扩散（Panel A 热力图弥散），
+          CLS 同时收缩为精准聚焦（Panel B 热力图仅亮少数 patch）。
+          两种空间响应模式的几何结构完全不兼容，导致相邻层 Spatial-CKA 跌至 0.591。</p>
         </div>
       </div>
 
@@ -1295,12 +1324,17 @@
           <div class="exp-number" style="color:var(--accent4)">⚡</div>
           <div class="exp-title-wrap">
             <div class="exp-title">第二断层 B9→10：CKA = 0.687</div>
-            <div class="exp-subtitle">成因：FFN 驱动的表示旋转（非注意力突变）</div>
+            <div class="exp-subtitle">CLS 第二次聚焦收缩 + FFN 表示旋转</div>
           </div>
-          <span class="exp-badge" style="background:rgba(201,123,255,.15);color:var(--accent4);border:1px solid rgba(201,123,255,.3)">假说B 修正</span>
+          <span class="exp-badge" style="background:rgba(201,123,255,.15);color:var(--accent4);border:1px solid rgba(201,123,255,.3)">双重机制</span>
         </div>
         <div class="exp-body">
-          <p>B9→10 注意力距离无跳变（6.84→6.77），patch→CLS 权重仅小幅上升（4.2×→5.4×），排除了注意力模式突变的解释。第二断层由 <strong>Block 10 的 FFN（MLP）权重主导</strong>：B5–9 相邻 CKA≈0.99（几乎原地踏步），B10 的 MLP 做了一次较大的特征空间旋转，将表示从"稳定全局混合"切换到"分类准备"模式，此后 patch→CLS 持续回升（B11: 8.1×），CLS 开始最终汇聚。</p>
+          <p>Panel B 热力图中 B9 出现第二次 CLS 聚焦收缩，与 B4 模式相似。
+          同时，B9→10 注意力距离无显著跳变（6.84→6.77），
+          说明 patch 空间感受野本身未突变，断层另有成因：
+          <strong>Block 10 的 FFN（MLP）</strong>执行了一次较大的特征空间旋转，
+          将表示从"稳定全局混合"切换到"分类准备"模式，
+          此后 patch→CLS 权重持续回升（B11: 8.1×），CLS 开始最终信息汇聚。</p>
         </div>
       </div>
     </div>
