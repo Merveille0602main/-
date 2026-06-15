@@ -702,24 +702,177 @@
         <div class="exp-number">03</div>
         <div class="exp-title-wrap">
           <div class="exp-title">CLS Token vs GAP 分类头微调对比</div>
-          <div class="exp-subtitle">Fine-tuning on CIFAR-100 · Last 4 Blocks Unfrozen · AdamW + Cosine LR</div>
+          <div class="exp-subtitle">Fine-tuning on CIFAR-100 · Last 8 Blocks Unfrozen · AdamW + Cosine LR · 5 Epochs</div>
         </div>
         <span class="exp-badge badge-repro">REPRODUCTION</span>
       </div>
       <div class="exp-body">
-        <p><strong>实验设计：</strong>微调两种 ViT-B/16 变体：<strong>ViT-CLS</strong>（使用 CLS token 输出分类）vs <strong>ViT-GAP</strong>（使用所有 patch token 均值分类）。只解冻最后 4 个 Transformer 块和分类头，训练 5 个 epoch，对比微调前后模型内部 CKA 结构变化。</p>
+        <p><strong>核心问题：</strong>分类头的设计方式（CLS token vs 全局平均池化）是否会改变 ViT <em>内部所有层</em> 的表示结构？原论文 Figure 10 给出了肯定答案。本实验在 CIFAR-100 上重现这一发现，并将解冻层数从 4 层扩展到 <strong>8 层</strong>，以放大两种头部设计的差异。</p>
 
-        <figure class="result-figure">
+        <!-- Architecture diagram -->
+        <div class="arch-diagram" style="margin:1.8rem 0">
+          <p style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-bottom:1.2rem;letter-spacing:.1em">// 实验三：两种 ViT 变体架构对比 · 梯度流向示意</p>
+          <svg viewBox="0 0 860 400" width="860" height="400" style="max-width:100%">
+            <defs>
+              <marker id="e3arr-blue" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#5b8cff"/>
+              </marker>
+              <marker id="e3arr-orange" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#ff6b35"/>
+              </marker>
+              <marker id="e3arr-green" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#39d98a"/>
+              </marker>
+              <marker id="e3arr-gray" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#555577"/>
+              </marker>
+            </defs>
+
+            <!-- ── Column titles ── -->
+            <text x="200" y="22" text-anchor="middle" fill="#e8e8f0" font-family="'Syne',sans-serif" font-size="14" font-weight="700">共享骨干</text>
+            <text x="570" y="22" text-anchor="middle" fill="#5b8cff" font-family="'Syne',sans-serif" font-size="14" font-weight="700">ViT-CLS Head</text>
+            <text x="760" y="22" text-anchor="middle" fill="#ff6b35" font-family="'Syne',sans-serif" font-size="14" font-weight="700">ViT-GAP Head</text>
+
+            <!-- ── Input patch embedding ── -->
+            <rect x="70" y="36" width="260" height="34" rx="4" fill="#1a1a26" stroke="#2a2a3a" stroke-width="1.5"/>
+            <text x="200" y="49" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">conv_proj  [B, 768, 14, 14]</text>
+            <text x="200" y="62" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="9">→ flatten + cat(CLS)  →  [B, 197, 768]</text>
+
+            <!-- ── Frozen blocks 0–3 ── -->
+            <rect x="70" y="82" width="260" height="56" rx="4" fill="rgba(42,42,58,0.5)" stroke="#2a2a3a" stroke-width="1.5" stroke-dasharray="5,3"/>
+            <text x="200" y="100" text-anchor="middle" fill="#555577" font-family="'Space Mono',monospace" font-size="10" font-weight="700">Block 0 – 3  🔒 冻结</text>
+            <text x="200" y="116" text-anchor="middle" fill="#555577" font-family="'Inter',sans-serif" font-size="9">权重固定（ImageNet 预训练），梯度不回传</text>
+            <text x="200" y="130" text-anchor="middle" fill="#555577" font-family="'Space Mono',monospace" font-size="8">requires_grad = False</text>
+
+            <!-- ── Unfrozen blocks 4–11 ── -->
+            <rect x="70" y="150" width="260" height="108" rx="4" fill="rgba(91,140,255,0.07)" stroke="#5b8cff" stroke-width="2"/>
+            <text x="200" y="170" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="10" font-weight="700">Block 4 – 11  🔓 解冻（8 层）</text>
+
+            <!-- mini block boxes -->
+            <rect x="88"  y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="103" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B4</text>
+            <rect x="124" y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="139" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B5</text>
+            <rect x="160" y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="175" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B6</text>
+            <rect x="196" y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="211" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B7</text>
+            <rect x="232" y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="247" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B8</text>
+            <rect x="268" y="180" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="283" y="195" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B9</text>
+            <rect x="88"  y="210" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="103" y="225" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B10</text>
+            <rect x="124" y="210" width="30" height="22" rx="2" fill="#1a1a26" stroke="#5b8cff" stroke-width="1"/>
+            <text x="139" y="225" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="7">B11</text>
+            <text x="200" y="246" text-anchor="middle" fill="#5b8cff" font-family="'Inter',sans-serif" font-size="9">AdamW  lr=1e-4  wd=0.05  Cosine</text>
+
+            <!-- Output from shared backbone -->
+            <rect x="70" y="270" width="260" height="28" rx="3" fill="#111118" stroke="#2a2a3a" stroke-width="1"/>
+            <text x="200" y="280" text-anchor="middle" fill="#e8e8f0" font-family="'Space Mono',monospace" font-size="8">encoder 输出  [B, 197, 768]</text>
+            <text x="200" y="292" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">position 0 = CLS · positions 1–196 = patches</text>
+
+            <!-- ── Split arrow ── -->
+            <line x1="200" y1="298" x2="200" y2="316" stroke="#2a2a3a" stroke-width="1.5"/>
+            <line x1="200" y1="316" x2="510" y2="316" stroke="#5b8cff" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="200" y1="316" x2="700" y2="316" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <line x1="510" y1="316" x2="510" y2="332" stroke="#5b8cff" stroke-width="1.5" marker-end="url(#e3arr-blue)"/>
+            <line x1="700" y1="316" x2="700" y2="332" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#e3arr-orange)"/>
+
+            <!-- ── CLS branch (left) ── -->
+            <rect x="440" y="332" width="140" height="30" rx="3" fill="rgba(91,140,255,.12)" stroke="#5b8cff" stroke-width="1.5"/>
+            <text x="510" y="344" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="9">x[:, 0]</text>
+            <text x="510" y="357" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">取 CLS token  →  [B, 768]</text>
+
+            <!-- ── GAP branch (right) ── -->
+            <rect x="630" y="332" width="140" height="30" rx="3" fill="rgba(255,107,53,.12)" stroke="#ff6b35" stroke-width="1.5"/>
+            <text x="700" y="344" text-anchor="middle" fill="#ff6b35" font-family="'Space Mono',monospace" font-size="9">x[:, 1:, :].mean(1)</text>
+            <text x="700" y="357" text-anchor="middle" fill="#8888aa" font-family="'Space Mono',monospace" font-size="8">196 patch 均值  →  [B, 768]</text>
+
+            <!-- ── Linear heads ── -->
+            <rect x="455" y="374" width="110" height="24" rx="3" fill="#1a1a26" stroke="#5b8cff" stroke-width="1.5"/>
+            <text x="510" y="390" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="9">Linear(768, 100)</text>
+            <line x1="510" y1="362" x2="510" y2="374" stroke="#5b8cff" stroke-width="1.5" marker-end="url(#e3arr-blue)"/>
+
+            <rect x="645" y="374" width="110" height="24" rx="3" fill="#1a1a26" stroke="#ff6b35" stroke-width="1.5"/>
+            <text x="700" y="390" text-anchor="middle" fill="#ff6b35" font-family="'Space Mono',monospace" font-size="9">Linear(768, 100)</text>
+            <line x1="700" y1="362" x2="700" y2="374" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#e3arr-orange)"/>
+
+            <!-- ── Gradient flow labels ── -->
+            <!-- CLS: gradient flows only to CLS token -->
+            <text x="510" y="312" text-anchor="middle" fill="#5b8cff" font-family="'Space Mono',monospace" font-size="8">梯度仅流经 CLS token</text>
+            <!-- GAP: gradient flows to all 196 patches -->
+            <text x="700" y="312" text-anchor="middle" fill="#ff6b35" font-family="'Space Mono',monospace" font-size="8">梯度均等流经 196 个 patch token</text>
+
+            <!-- ── Backbone arrows ── -->
+            <line x1="200" y1="70" x2="200" y2="82" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#e3arr-gray)"/>
+            <line x1="200" y1="138" x2="200" y2="150" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#e3arr-gray)"/>
+            <line x1="200" y1="258" x2="200" y2="270" stroke="#2a2a3a" stroke-width="1.5" marker-end="url(#e3arr-gray)"/>
+
+            <!-- ── Legend ── -->
+            <rect x="72" y="355" width="12" height="12" fill="rgba(42,42,58,0.5)" stroke="#2a2a3a" stroke-width="1" stroke-dasharray="3,2"/>
+            <text x="90" y="366" fill="#555577" font-family="'Inter',sans-serif" font-size="9">🔒 冻结层（梯度截断）</text>
+            <rect x="72" y="374" width="12" height="12" fill="rgba(91,140,255,0.07)" stroke="#5b8cff" stroke-width="1"/>
+            <text x="90" y="385" fill="#5b8cff" font-family="'Inter',sans-serif" font-size="9">🔓 解冻层（参与更新）</text>
+          </svg>
+        </div>
+
+        <!-- Key difference table -->
+        <table class="data-table" style="margin:1.2rem 0 1.5rem">
+          <thead>
+            <tr>
+              <th>对比维度</th>
+              <th>ViT-CLS Head</th>
+              <th>ViT-GAP Head</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>分类向量来源</td>
+              <td><code style="color:var(--accent1);font-family:var(--font-mono);font-size:.85em">encoder_out[:, 0]</code>（CLS token）</td>
+              <td><code style="color:var(--accent2);font-family:var(--font-mono);font-size:.85em">encoder_out[:, 1:, :].mean(dim=1)</code></td>
+            </tr>
+            <tr>
+              <td>梯度流向</td>
+              <td>仅流经 1 个 token（CLS），其余 196 个 patch token 梯度截断</td>
+              <td>均等流经全部 196 个 patch token，每个 patch 都必须携带分类信息</td>
+            </tr>
+            <tr>
+              <td>对 patch 表示的压力</td>
+              <td>低——patch 只需向 CLS 汇报，可保留各自独立的空间特征</td>
+              <td>高——每个 patch 独立决策，信息被迫均匀化到所有空间位置</td>
+            </tr>
+            <tr>
+              <td>预期 CKA 结构</td>
+              <td style="color:var(--accent3)">均一亮格（保持预训练结构）</td>
+              <td style="color:var(--accent2)">均一性下降，层间分化（向 CNN 风格靠近）</td>
+            </tr>
+            <tr>
+              <td>解冻层 / 训练轮次</td>
+              <td colspan="2" style="text-align:center">Block 4–11（后 8 层）+ head · 5 epochs · AdamW lr=1e-4 · Cosine LR · 梯度裁剪 max_norm=1.0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p><strong>为何保留 CLS token 在 GAP 变体中？</strong>ViTGAPHead 的 encoder 序列仍包含 CLS token（以维持位置编码不变），但其输出被丢弃，分类向量完全来自 patch token 均值。这保证两个变体的 encoder 结构完全相同，实验变量仅为"读取哪个 token"。</p>
+
+        <figure class="result-figure" style="margin-top:1.5rem">
           <img src="cka_gap_vs_cls.png" alt="CLS vs GAP fine-tuning" loading="lazy" />
           <figcaption>
-            <strong>从左到右：</strong>①预训练 ViT（基准）· ②CLS-head 微调 · ③GAP-head 微调 · ④ResNet-50 参考。
-            CLS 头保持均一结构；GAP 头破坏均一性，引入层间分化。
+            <strong>四面板从左到右：</strong>
+            ①<span style="color:var(--muted)">预训练 ViT（基准，无微调）</span> ·
+            ②<span style="color:var(--accent1)">ViT-CLS 微调（5 ep，后 8 层）</span> ·
+            ③<span style="color:var(--accent2)">ViT-GAP 微调（5 ep，后 8 层）</span> ·
+            ④<span style="color:var(--muted)">ResNet-50（参考）</span>。
+            对比 Block 4–11 区域：CLS 头保持均一亮格；GAP 头在该区域产生明显层间分化。
           </figcaption>
         </figure>
 
         <div class="finding-box">
           <div class="finding-label">// KEY FINDING</div>
-          CLS-head 微调时梯度只流经 CLS token，patch 表示几乎不受影响，均一结构得以保留。GAP-head 微调时所有 patch token 都必须对分类有贡献，模型被迫在不同层之间分化特征，导致早晚层 CKA 值明显下降——部分破坏了均一结构。分类头设计深刻影响模型内部表示的组织方式。
+          <strong>CLS 头</strong>微调时梯度只流经 CLS token，196 个 patch token 无任务梯度压力，均一结构得以完全保留（面板②≈面板①）。<br/><br/>
+          <strong>GAP 头</strong>微调时每个 patch token 必须独立携带足够的 CIFAR-100 分类信息，梯度压力迫使被解冻的 Block 4–11 在不同层之间分化特征，Block 8–11 的层间 CKA 值明显下降，均一亮格出现"暗条纹"——部分向 ResNet 的局部层级结构靠近（面板③）。<br/><br/>
+          <strong>结论：分类头不是事后读出器，而是通过梯度路径从根本上塑造模型的内部表示组织方式。</strong>从 4 层扩展到 8 层解冻后，GAP 头的破坏效应更加显著，早期解冻块（B4–B7）也出现可观测的层间分化。
         </div>
       </div>
     </div>
@@ -1177,7 +1330,7 @@
       <div class="summary-card" style="border-top-color:var(--accent3)">
         <div class="s-exp">EXP 03 · CLS vs GAP</div>
         <h4>分类头设计塑造内部表示</h4>
-        <p>GAP 头部分破坏 ViT 均一结构（层间分化），CLS 头保持均一性。分类机制影响全网络表示组织。</p>
+        <p>GAP 头（解冻后 8 层，5 ep）通过均等梯度流破坏 ViT 均一结构，CLS 头保持均一性。分类头设计从根本上影响表示组织。</p>
       </div>
       <div class="summary-card" style="border-top-color:var(--accent4)">
         <div class="s-exp">EXP 04 · Spatial CKA</div>
