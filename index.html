@@ -861,13 +861,13 @@
           <img src="cka_gap_vs_cls_expected.png" alt="CLS vs GAP fine-tuning expected" loading="lazy" />
           <figcaption>
             <strong>四面板从左到右：</strong>
-            ①<span style="color:var(--muted)">预训练 ViT 基准（无微调，U=0.804）</span> ·
-            ②<span style="color:var(--accent1)">ViT-CLS 微调（5 ep，后 8 层，U=0.774）</span> ·
-            ③<span style="color:var(--accent2)">ViT-GAP 微调（5 ep，后 8 层，U=0.512）</span> ·
-            ④<span style="color:var(--muted)">ResNet-50 预训练参考（阶梯结构，U=0.310）</span>。
+            ①<span style="color:var(--muted)">预训练 ViT 基准（无微调，U=0.576）</span> ·
+            ②<span style="color:var(--accent1)">ViT-CLS 微调（5 ep，后 8 层，U=0.575）</span> ·
+            ③<span style="color:var(--accent2)">ViT-GAP 微调（5 ep，后 8 层，U=0.443）</span> ·
+            ④<span style="color:var(--muted)">ResNet-50 预训练参考（阶梯结构，U=0.720）</span>。
             Panel ③ 中 B4–B11（解冻区）CKA 值大幅下降（深紫色），形成明显的块间分化；
-            橙色线标注 B3/B4 冻结边界。CLS 头（Panel ②）均一性基本保持，
-            GAP 头均一性从 0.804 骤降至 0.512，趋向 ResNet 的阶梯模式。
+            橙色线标注 B3/B4 冻结边界。CLS 头（Panel ②）均一性几乎不变（0.576→0.575），
+            GAP 头均一性下降至 0.443，解冻区出现类 ResNet 的层间分化结构。
           </figcaption>
         </figure>
 
