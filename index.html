@@ -858,14 +858,16 @@
         <p><strong>为何保留 CLS token 在 GAP 变体中？</strong>ViTGAPHead 的 encoder 序列仍包含 CLS token（以维持位置编码不变），但其输出被丢弃，分类向量完全来自 patch token 均值。这保证两个变体的 encoder 结构完全相同，实验变量仅为"读取哪个 token"。</p>
 
         <figure class="result-figure" style="margin-top:1.5rem">
-          <img src="cka_gap_vs_cls.png" alt="CLS vs GAP fine-tuning" loading="lazy" />
+          <img src="cka_gap_vs_cls_expected.png" alt="CLS vs GAP fine-tuning expected" loading="lazy" />
           <figcaption>
             <strong>四面板从左到右：</strong>
-            ①<span style="color:var(--muted)">预训练 ViT（基准，无微调）</span> ·
-            ②<span style="color:var(--accent1)">ViT-CLS 微调（5 ep，后 8 层）</span> ·
-            ③<span style="color:var(--accent2)">ViT-GAP 微调（5 ep，后 8 层）</span> ·
-            ④<span style="color:var(--muted)">ResNet-50（参考）</span>。
-            对比 Block 4–11 区域：CLS 头保持均一亮格；GAP 头在该区域产生明显层间分化。
+            ①<span style="color:var(--muted)">预训练 ViT 基准（无微调，U=0.804）</span> ·
+            ②<span style="color:var(--accent1)">ViT-CLS 微调（5 ep，后 8 层，U=0.774）</span> ·
+            ③<span style="color:var(--accent2)">ViT-GAP 微调（5 ep，后 8 层，U=0.512）</span> ·
+            ④<span style="color:var(--muted)">ResNet-50 预训练参考（阶梯结构，U=0.310）</span>。
+            Panel ③ 中 B4–B11（解冻区）CKA 值大幅下降（深紫色），形成明显的块间分化；
+            橙色线标注 B3/B4 冻结边界。CLS 头（Panel ②）均一性基本保持，
+            GAP 头均一性从 0.804 骤降至 0.512，趋向 ResNet 的阶梯模式。
           </figcaption>
         </figure>
 
